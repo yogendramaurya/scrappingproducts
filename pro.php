@@ -5,8 +5,8 @@ require 'vendor/autoload.php';
 use Goutte\Client;
 $servername = "localhost";
 $username = "root";
-$password = "";
-$dbname = "scrapping";
+$password = "root";
+$dbname = "scrappin";
 $page = 0;
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -17,40 +17,39 @@ if ($conn->connect_error) {
 #require "database.php";
 
 /* Fetch category urls*/
-$sql = "SELECT DISTINCT url FROM producturls where status=0";
+$sql = "SELECT url FROM producturls where status=0";
 $result = $conn->query($sql);
+
+// echo $result->num_rows;
+
+echo "There are $result->num_rows urls to process...............................\n";
 $file = fopen("contacts.csv","w");
-$header = array('name', 'sku', 'ean', 'detailsfsf', 'images', 'price', 'categories');
+$header = array('name', 'sku', 'ean', 'detail', 'images', 'price', 'categories');
 fputcsv($file, $header);
 fclose($file);
+$errorURL = array();
+if ($result->num_rows > 0) {
+    // output data of each row
+    while($row = $result->fetch_assoc()) {
+		$url = $row["url"];		
+		try {
+			scrapURL($conn, $url, $file);
+			$status = 'UPDATE producturls SET status=1 WHERE url="'.$url.'"';
 
-// if ($result->num_rows > 0) {
-//     // output data of each row
-//     while($row = $result->fetch_assoc()) {
-// 		echo $url = $row["url"];
-// 		echo "-------------------START URL   $url -------------------------------";
-// 		try {
-// 			scrapURL($conn, $url, $file);
-// 			$status = 'UPDATE producturls SET status=1 WHERE url="'.$url.'"';
-
-// 			if ($conn->query($status) === TRUE) {
-// 				echo "Record updated successfully"."\n";
-// 			} else {
-// 				echo "Error updating record: " . $conn->error;
-// 			}
-// 			usleep(100);
-// 		} catch (Exception $th) {
-// 			echo $th->getMessage();
-// 		}
-
-// 		echo "-------------------END URL-------------------------------<br>";
-// 		continue;
-        
-        
-//     }
-// } else {
-//     echo "0 results";
-// }
+			if ($conn->query($status) === TRUE) {
+				echo "-";
+			} else {
+				$errorURL[$url] = $conn->error;
+			}
+			usleep(200);
+		} catch (Exception $th) {
+			// echo $th->getMessage();
+			$errorURL[$url] = $th->getMessage();
+		}
+    }
+} else {
+    echo "0 results";
+}
 
 
 
@@ -72,7 +71,7 @@ function scrapURL($conn, $url, $file)
 	try{
 		$description = @$crawler->filter("#product_specification")->html();
 	} catch (Exception $th) {
-		echo $th->getMessage();
+		// echo $th->getMessage();
 		$description = $name[0];
 	}
 
@@ -82,12 +81,15 @@ function scrapURL($conn, $url, $file)
 
 	 $image = implode("|", $images);
 	 $categories = implode("|", array_unique($breadcrumb_span));
+
+	 $image = !empty($image) ? $image : null;
 	
 	 $sku_d = $sku[0];
 	 $sku_e = @$sku[1];
 	$priced = $price[0];
 	//$row = array('name', 'sku', 'ean', 'detail', 'images', 'price', 'categories');
 	$line = array($name[0],$sku_d,$sku_e, $description, $image, $priced, $categories);
+	print_r($line);
 	
 	fputcsv($file, $line);
 	return;
