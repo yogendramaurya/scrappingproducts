@@ -26,7 +26,7 @@ echo "There are $result->num_rows urls to process...............................
 $file = fopen("contacts.csv","w");
 $header = array('name', 'sku', 'ean', 'detail', 'images', 'price', 'categories');
 fputcsv($file, $header);
-fclose($file);
+
 $errorURL = array();
 if ($result->num_rows > 0) {
     // output data of each row
@@ -41,7 +41,7 @@ if ($result->num_rows > 0) {
 			} else {
 				$errorURL[$url] = $conn->error;
 			}
-			usleep(200);
+			usleep(2);
 		} catch (Exception $th) {
 			// echo $th->getMessage();
 			$errorURL[$url] = $th->getMessage();
@@ -52,7 +52,7 @@ if ($result->num_rows > 0) {
 }
 
 
-
+fclose($file);
 
 function scrapURL($conn, $url, $file)
 {
